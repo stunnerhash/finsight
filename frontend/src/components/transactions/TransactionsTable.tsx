@@ -37,11 +37,13 @@ interface TransactionsTableProps {
   sortBy: 'date' | 'amount' | 'title';
   sortOrder: 'asc' | 'desc';
   onSort: (field: 'date' | 'amount' | 'title') => void;
+  loading?: boolean;
 }
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({
   transactions,
   onSort,
+  loading = false,
 }) => {
   return (
     <Card className="text-left">
@@ -89,7 +91,16 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.length > 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                      <span>Loading transactions...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : transactions.length > 0 ? (
                 transactions.map((transaction) => (
                   <TransactionRow key={transaction.id} transaction={transaction} />
                 ))

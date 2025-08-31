@@ -24,6 +24,7 @@ const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BackendBudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'income' | 'expense'>('all');
@@ -44,7 +45,7 @@ const TransactionsPage: React.FC = () => {
     type: 'expense' as 'income' | 'expense'
   });
 
-  // Fetch data with server-side pagination and filtering
+  // Fetch all data (transactions + categories) - used for initial load
   const fetchData = async (page: number = 1) => {
     try {
       setLoading(true);
@@ -89,28 +90,68 @@ const TransactionsPage: React.FC = () => {
     }
   };
 
+  // Fetch only transactions - used for filter changes
+  const fetchTransactionsOnly = async (page: number = 1) => {
+    try {
+      setTransactionsLoading(true);
+      
+      // Build query parameters for server-side filtering and pagination
+      const queryParams: {
+        page: number;
+        limit: number;
+        type?: 'income' | 'expense';
+        search?: string;
+        startDate?: string;
+        endDate?: string;
+      } = {
+        page,
+        limit: 10
+      };
+      
+      if (selectedType !== 'all') {
+        queryParams.type = selectedType;
+      }
+      
+      if (searchTerm.trim()) {
+        queryParams.search = searchTerm.trim();
+      }
+      
+      const transactionsResponse = await financeService.apiService.getTransactions(queryParams);
+      
+      setTransactions(transactionsResponse.transactions);
+      setPaginationInfo(transactionsResponse.pagination);
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchData(page);
+    fetchTransactionsOnly(page); // Only fetch transactions, not entire page
   };
 
-  // Handle search change with debouncing
+  // Handle search change - only filter locally, no API call
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1); // Reset to first page when searching
+    // No API call needed - search is handled locally
   };
 
   // Handle type filter change
   const handleTypeChange = (type: 'all' | 'income' | 'expense') => {
     setSelectedType(type);
     setCurrentPage(1); // Reset to first page when filtering
+    fetchTransactionsOnly(1); // Only fetch transactions, not categories
   };
 
   // Handle category filter change
   const handleCategoryChange = (category: number | 'all') => {
     setSelectedCategory(category);
     setCurrentPage(1); // Reset to first page when filtering
+    fetchTransactionsOnly(1); // Only fetch transactions, not categories
   };
 
   // Clear all filters
@@ -126,10 +167,7 @@ const TransactionsPage: React.FC = () => {
     fetchData(1);
   }, []);
 
-  // Refetch data when filters change
-  useEffect(() => {
-    fetchData(1);
-  }, [searchTerm, selectedType, selectedCategory]);
+
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,12 +226,14 @@ const TransactionsPage: React.FC = () => {
     }
   };
 
-  // Client-side filtering for category (since backend doesn't support it yet)
+  // Client-side filtering for search and category
   const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = searchTerm.trim() === '' || 
+      transaction.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || 
       (transaction.categoryId && transaction.categoryId === selectedCategory);
     
-    return matchesCategory;
+    return matchesSearch && matchesCategory;
   });
 
   // Client-side sorting (since backend doesn't support it yet)
@@ -283,6 +323,7 @@ const TransactionsPage: React.FC = () => {
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSort={toggleSort}
+          loading={transactionsLoading}
         />
 
         {/* Always show pagination for testing */}
