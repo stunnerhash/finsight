@@ -109,14 +109,22 @@ const TransactionsPage: React.FC = () => {
       };
       
       if (selectedType !== 'all') {
-        queryParams.type = selectedType;
+        // Temporary fix: Invert the type to work around backend bug
+        // When backend is fixed, remove this inversion
+        const invertedType = selectedType === 'income' ? 'expense' : 'income';
+        console.log('Original type:', selectedType, 'Inverted to:', invertedType);
+        queryParams.type = invertedType;
       }
       
       if (searchTerm.trim()) {
         queryParams.search = searchTerm.trim();
       }
       
+      console.log('Sending filter params:', queryParams); // Debug log
+      
       const transactionsResponse = await financeService.apiService.getTransactions(queryParams);
+      
+      console.log('Received transactions:', transactionsResponse.transactions); // Debug log
       
       setTransactions(transactionsResponse.transactions);
       setPaginationInfo(transactionsResponse.pagination);
@@ -142,6 +150,7 @@ const TransactionsPage: React.FC = () => {
 
   // Handle type filter change
   const handleTypeChange = (type: 'all' | 'income' | 'expense') => {
+    console.log('Filter type changed to:', type); // Debug log
     setSelectedType(type);
     setCurrentPage(1); // Reset to first page when filtering
     fetchTransactionsOnly(1); // Only fetch transactions, not categories
