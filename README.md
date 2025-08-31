@@ -114,7 +114,7 @@ backend/src/
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/stunnerhash/finsight.git
 cd finsight
 ```
 
