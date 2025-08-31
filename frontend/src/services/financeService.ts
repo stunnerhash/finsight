@@ -73,14 +73,14 @@ export class FinanceService {
     }
 
     try {
-      const [budgetCategories, stats, transactions] = await Promise.all([
+      const [budgetCategories, stats, transactionsResponse] = await Promise.all([
         apiService.getBudgetCategories(this.currentPeriod),
         apiService.getStats(this.currentPeriod),
-        apiService.getTransactions(this.currentPeriod),
+        apiService.getTransactions({ period: this.currentPeriod, limit: 7 }),
       ]);
 
       const transformedCategories = budgetCategories.map(transformBudgetCategory);
-      const transformedTransactions = transactions.map(transformTransaction);
+      const transformedTransactions = transactionsResponse.transactions.map(transformTransaction);
       const derivedData = calculateFinanceData(budgetCategories, stats);
 
       const financeData: FinanceData = {

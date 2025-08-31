@@ -30,7 +30,7 @@ const TransactionHeader: React.FC<TransactionHeaderProps> = ({ onAddTransaction,
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={onUploadReceipt} className="flex items-center gap-2">
+          <Button variant="outline" onClick={onUploadReceipt} className="flex items-center gap-2 text-white hover:text-white">
             <Camera className="h-4 w-4" />
             Upload Receipt
           </Button>

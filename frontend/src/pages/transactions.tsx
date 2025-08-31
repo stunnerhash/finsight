@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loading } from '@/components/ui/loading';
 import { financeService } from '@/services/financeService';
-import type { BackendTransaction, BackendBudgetCategory } from '@/services/api';
+import type { BackendBudgetCategory, PaginationInfo } from '@/services/api';
+import type { BackendTransaction } from '@/services/api';
 import {
   TransactionHeader,
   TransactionFilters,
@@ -9,6 +10,14 @@ import {
   AddTransactionModal,
   ReceiptUploadModal
 } from '@/components/transactions';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
@@ -22,6 +31,10 @@ const TransactionsPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationInfo, setPaginationInfo] = useState<PaginationInfo | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -30,21 +43,43 @@ const TransactionsPage: React.FC = () => {
     type: 'expense' as 'income' | 'expense'
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  // Fetch data with server-side pagination and filtering
+  const fetchData = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
       
-      const [transactionsData, categoriesData] = await Promise.all([
-        financeService.apiService.getTransactions(),
+      // Build query parameters for server-side filtering and pagination
+      const queryParams: {
+        page: number;
+        limit: number;
+        type?: 'income' | 'expense';
+        search?: string;
+        startDate?: string;
+        endDate?: string;
+      } = {
+        page,
+        limit: 10  // Changed from 20 to 10 transactions per page
+      };
+      
+      if (selectedType !== 'all') {
+        queryParams.type = selectedType;
+      }
+      
+      if (searchTerm.trim()) {
+        queryParams.search = searchTerm.trim();
+      }
+      
+      const [transactionsResponse, categoriesData] = await Promise.all([
+        financeService.apiService.getTransactions(queryParams),
         financeService.apiService.getBudgetCategories()
       ]);
       
-      setTransactions(transactionsData);
+      console.log('Transactions Response:', transactionsResponse);
+      console.log('Pagination Info:', transactionsResponse.pagination);
+      
+      setTransactions(transactionsResponse.transactions);
+      setPaginationInfo(transactionsResponse.pagination);
       setBudgetCategories(categoriesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -52,6 +87,48 @@ const TransactionsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchData(page);
+  };
+
+  // Handle search change with debouncing
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  // Handle type filter change
+  const handleTypeChange = (type: 'all' | 'income' | 'expense') => {
+    setSelectedType(type);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  // Handle category filter change
+  const handleCategoryChange = (category: number | 'all') => {
+    setSelectedCategory(category);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedType('all');
+    setSelectedCategory('all');
+    setCurrentPage(1);
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchData(1);
+  }, []);
+
+  // Refetch data when filters change
+  useEffect(() => {
+    fetchData(1);
+  }, [searchTerm, selectedType, selectedCategory]);
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +164,8 @@ const TransactionsPage: React.FC = () => {
       setFormData({ title: '', amount: '', categoryId: '', type: 'expense' });
       setShowAddModal(false);
       
-      fetchData();
+      // Refresh current page
+      fetchData(currentPage);
     } catch (err) {
       alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
@@ -102,22 +180,22 @@ const TransactionsPage: React.FC = () => {
     try {
       await financeService.addTransaction(transactionData);
       
-      // Refresh data
-      fetchData();
+      // Refresh current page
+      fetchData(currentPage);
     } catch (err) {
       alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
+  // Client-side filtering for category (since backend doesn't support it yet)
   const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = transaction.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'all' || transaction.type === selectedType;
     const matchesCategory = selectedCategory === 'all' || 
       (transaction.categoryId && transaction.categoryId === selectedCategory);
     
-    return matchesSearch && matchesType && matchesCategory;
+    return matchesCategory;
   });
 
+  // Client-side sorting (since backend doesn't support it yet)
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
     let aValue: string | number | Date, bValue: string | number | Date;
     
@@ -170,7 +248,7 @@ const TransactionsPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-2">Failed to load transactions</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
           <button
-            onClick={fetchData}
+            onClick={() => fetchData(currentPage)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Try Again
@@ -193,22 +271,59 @@ const TransactionsPage: React.FC = () => {
           selectedType={selectedType}
           selectedCategory={selectedCategory}
           budgetCategories={budgetCategories}
-          onSearchChange={setSearchTerm}
-          onTypeChange={setSelectedType}
-          onCategoryChange={setSelectedCategory}
-          onClearFilters={() => {
-            setSearchTerm('');
-            setSelectedType('all');
-            setSelectedCategory('all');
-          }}
+          onSearchChange={handleSearchChange}
+          onTypeChange={handleTypeChange}
+          onCategoryChange={handleCategoryChange}
+          onClearFilters={handleClearFilters}
         />
 
         <TransactionsTable
-          transactions={sortedTransactions as BackendTransaction[]}
+          transactions={sortedTransactions}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSort={toggleSort}
         />
+
+
+
+        {/* Always show pagination for testing */}
+        <div className="mt-6">
+          {paginationInfo ? (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => handlePageChange(paginationInfo.currentPage - 1)}
+                    className={paginationInfo.currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: paginationInfo.totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(page)}
+                      isActive={page === paginationInfo.currentPage}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => handlePageChange(paginationInfo.currentPage + 1)}
+                    className={paginationInfo.currentPage === paginationInfo.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          ) : (
+            <div className="text-center text-white">
+              <p>Loading pagination...</p>
+            </div>
+          )}
+        </div>
 
         <AddTransactionModal
           isOpen={showAddModal}

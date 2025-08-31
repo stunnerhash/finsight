@@ -9,7 +9,20 @@ const getTransactions = async (req, res) => {
       return res.status(404).json(ApiResponse.error("No user found"));
     }
 
-    const { period = 'current' } = req.query;
+    const { 
+      period = 'current',
+      page = 1,
+      limit = 10,
+      type,
+      search,
+      startDate,
+      endDate
+    } = req.query;
+    
+    // Parse pagination parameters
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
     
     const now = new Date();
     let targetMonth, targetYear;
@@ -38,19 +51,58 @@ const getTransactions = async (req, res) => {
       ? new Date(targetYear, 11, 31, 23, 59, 59) // End of year
       : new Date(targetYear, targetMonth + 1, 0, 23, 59, 59); // End of month
 
+    // Build where clause
+    const whereClause = {
+      userId: user.id,
+      date: {
+        gte: startDate ? new Date(startDate) : periodStart,
+        lte: endDate ? new Date(endDate) : periodEnd
+      }
+    };
+
+    // Add type filter if provided
+    if (type && (type === 'income' || type === 'expense')) {
+      whereClause.type = type;
+    }
+
+    // Add search filter if provided
+    if (search && search.trim()) {
+      whereClause.title = {
+        contains: search.trim(),
+        mode: 'insensitive' // Case-insensitive search
+      };
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.transaction.count({
+      where: whereClause
+    });
+
+    // Get paginated transactions
     const transactions = await prisma.transaction.findMany({
-      where: { 
-        userId: user.id,
-        date: {
-          gte: periodStart,
-          lte: periodEnd
-        }
-      },
+      where: whereClause,
       orderBy: { date: "desc" },
-      take: 10,
+      skip: skip,
+      take: limitNum,
       include: { category: true }
     });
-    res.json(ApiResponse.success(transactions));
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+
+    res.json(ApiResponse.success({
+      transactions,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        hasNextPage,
+        hasPrevPage,
+        limit: limitNum
+      }
+    }));
   } catch (error) {
     res.status(500).json(ApiResponse.error(error.message));
   }

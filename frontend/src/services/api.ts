@@ -12,14 +12,28 @@ export interface BackendTransaction {
   amount: number;
   type: 'income' | 'expense';
   date: string;
-  categoryId?: number;
+  categoryId?: number | null;
   category?: {
     id: number;
     name: string;
     budgeted: number;
     spent: number;
     color: string;
-  };
+  } | null;
+}
+
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  limit: number;
+}
+
+export interface PaginatedTransactionsResponse {
+  transactions: BackendTransaction[];
+  pagination: PaginationInfo;
 }
 
 export interface BackendBudgetCategory {
@@ -87,9 +101,29 @@ class ApiService {
     return this.request<BackendStats>(`/budget/stats${params}`);
   }
 
-  async getTransactions(period?: string): Promise<BackendTransaction[]> {
-    const params = period ? `?period=${period}` : '';
-    return this.request<BackendTransaction[]>(`/transactions${params}`);
+  async getTransactions(params?: {
+    period?: string;
+    page?: number;
+    limit?: number;
+    type?: 'income' | 'expense';
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<PaginatedTransactionsResponse> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.period) queryParams.append('period', params.period);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    
+    const queryString = queryParams.toString();
+    const url = `/transactions${queryString ? `?${queryString}` : ''}`;
+    
+    return this.request<PaginatedTransactionsResponse>(url);
   }
 
   async addTransaction(transaction: {

@@ -101,7 +101,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 text-white hover:text-white"
             >
               Cancel
             </Button>

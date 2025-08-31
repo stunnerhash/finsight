@@ -71,6 +71,7 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
           <Button
             variant="outline"
             onClick={onClearFilters}
+            className="text-white hover:text-white"
           >
             Clear Filters
           </Button>
