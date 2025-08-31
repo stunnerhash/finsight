@@ -29,7 +29,7 @@ interface BackendTransaction {
     budgeted: number;
     spent: number;
     color: string;
-  };
+  } | null;
 }
 
 interface TransactionsTableProps {

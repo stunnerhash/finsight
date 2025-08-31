@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   DashboardHeader,
   StatsSection,
   BudgetCategoriesSection,
-  RecentTransactionsSection
+  RecentTransactionsSection,
+  AnalyticsSection
 } from '@/components/dashboard';
 import { AddTransactionModal, ReceiptUploadModal } from '@/components/transactions';
-import { 
-  ExpensesByCategoryChart
-} from '@/components/charts';
 import { Loading } from '@/components/ui/loading';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useDashboardModals } from '@/hooks/useDashboardModals';
+import { useChartData } from '@/hooks/useChartData';
 import { financeService } from '@/services/financeService';
-import type { BackendBudgetCategory, BackendTransaction } from '@/services/api';
+import type { BackendBudgetCategory } from '@/services/api';
 
 const Dashboard: React.FC = () => {
   const {
@@ -25,19 +25,22 @@ const Dashboard: React.FC = () => {
     refreshData
   } = useDashboard();
 
-  // Modal state for adding transaction
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    amount: '',
-    categoryId: '',
-    type: 'expense' as 'income' | 'expense'
-  });
+  const {
+    transactions,
+    budgetCategories,
+    fetchChartData
+  } = useChartData();
 
-  // Chart data state
-  const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
-  const [budgetCategories, setBudgetCategories] = useState<BackendBudgetCategory[]>([]);
+  const {
+    showAddModal,
+    showReceiptModal,
+    formData,
+    setShowAddModal,
+    setShowReceiptModal,
+    handleAddTransaction,
+    handleReceiptTransaction,
+    handleFormDataChange,
+  } = useDashboardModals(refreshData, fetchChartData);
 
   const handleAddTransactionClick = () => {
     setShowAddModal(true);
@@ -45,79 +48,6 @@ const Dashboard: React.FC = () => {
 
   const handleUploadReceiptClick = () => {
     setShowReceiptModal(true);
-  };
-
-  // Fetch chart data
-  const fetchChartData = async () => {
-    try {
-      const [transactionsResponse, categoriesData] = await Promise.all([
-        financeService.apiService.getTransactions({ limit: 1000 }), // Get more transactions for charts
-        financeService.apiService.getBudgetCategories()
-      ]);
-      
-      setTransactions(transactionsResponse.transactions);
-      setBudgetCategories(categoriesData);
-    } catch (err) {
-      console.error('Failed to fetch chart data:', err);
-    }
-  };
-
-  // Fetch chart data on component mount
-  useEffect(() => {
-    fetchChartData();
-  }, []);
-
-  const handleAddTransaction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title || !formData.amount) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    
-    // Only require category for expenses
-    if (formData.type === 'expense' && !formData.categoryId) {
-      alert('Please select a category for expenses');
-      return;
-    }
-
-    try {
-      await financeService.addTransaction({
-        title: formData.title,
-        amount: parseFloat(formData.amount),
-        categoryId: parseInt(formData.categoryId),
-        type: formData.type
-      });
-
-      // Reset form and close modal
-      setFormData({ title: '', amount: '', categoryId: '', type: 'expense' });
-      setShowAddModal(false);
-      
-      // Refresh dashboard data
-      refreshData();
-      // Refresh chart data
-      fetchChartData();
-    } catch (err) {
-      alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
-  };
-
-  const handleReceiptTransaction = async (transactionData: {
-    title: string;
-    amount: number;
-    categoryId: number;
-    type: 'income' | 'expense';
-  }) => {
-    try {
-      await financeService.addTransaction(transactionData);
-      
-      // Refresh dashboard data
-      refreshData();
-      // Refresh chart data
-      fetchChartData();
-    } catch (err) {
-      alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
   };
 
   const handleBudgetUpdate = async (categoryId: number, budgeted: number) => {
@@ -194,23 +124,17 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Analytics Charts Section */}
-        <div className="mt-8 space-y-6">
-          <h2 className="text-2xl font-bold text-left">Analytics</h2>
-          <div className="w-full">
-            <ExpensesByCategoryChart
-              transactions={transactions}
-              budgetCategories={budgetCategories}
-            />
-          </div>
-        </div>
+        <AnalyticsSection 
+          transactions={transactions}
+          budgetCategories={budgetCategories}
+        />
 
         <AddTransactionModal
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddTransaction}
           formData={formData}
-          onFormDataChange={(field, value) => setFormData({ ...formData, [field]: value })}
+          onFormDataChange={handleFormDataChange}
           budgetCategories={financeData.budgetCategories}
         />
 

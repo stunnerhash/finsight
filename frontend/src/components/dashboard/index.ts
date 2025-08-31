@@ -6,3 +6,4 @@ export { default as BudgetCategoriesSection } from './BudgetCategoriesSection';
 export { default as RecentTransactionsSection } from './RecentTransactionsSection';
 export { default as StatsSection } from './StatsSection';
 export { default as PeriodSelector } from './PeriodSelector';
+export { AnalyticsSection } from './AnalyticsSection';
