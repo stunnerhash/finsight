@@ -120,8 +120,6 @@ cd finsight
 
 ### 2. Install Dependencies
 ```bash
-# Install root dependencies
-npm install
 
 # Install frontend dependencies
 cd frontend
