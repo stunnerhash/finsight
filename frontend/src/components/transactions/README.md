@@ -38,6 +38,21 @@ This directory contains modular components for the transactions page, extracted 
   - `budgetCategories` for category selection
 - **Features**: Form validation, category selection, type selection
 
+### ReceiptUploadModal
+- **Purpose**: Modal for uploading receipt photos and extracting bill amounts using OCR
+- **Props**:
+  - Modal state (`isOpen`)
+  - `onClose` callback function
+  - `onSubmit` callback function for transaction data
+  - `budgetCategories` for category selection
+- **Features**: 
+  - Drag & drop file upload
+  - OCR text extraction using Tesseract.js
+  - Intelligent bill amount detection with regex patterns
+  - Progress tracking during OCR processing
+  - Pre-filled transaction form with extracted data
+  - Support for multiple image formats (PNG, JPG, JPEG)
+
 ## Types
 
 ### BackendTransaction
@@ -72,17 +87,38 @@ interface BackendBudgetCategory {
 }
 ```
 
-## Usage
+## OCR Features
 
-The main transactions page now imports and uses these components:
+The ReceiptUploadModal uses Tesseract.js for OCR processing and includes:
 
-```typescript
-import {
-  TransactionHeader,
-  TransactionFilters,
-  TransactionsTable,
-  AddTransactionModal
-} from '@/components/transactions';
+1. **Multi-pattern regex matching** for finding bill totals
+2. **Currency symbol support** ($, €, £, ₹, ¥)
+3. **International number format support** (1,234.56 or 1.234,56)
+4. **Progress tracking** during OCR processing
+5. **Error handling** for failed OCR attempts
+
+## Usage Examples
+
+### Basic Transaction Addition
+```tsx
+<AddTransactionModal
+  isOpen={showAddModal}
+  onClose={() => setShowAddModal(false)}
+  onSubmit={handleAddTransaction}
+  formData={formData}
+  onFormDataChange={handleFormDataChange}
+  budgetCategories={budgetCategories}
+/>
+```
+
+### Receipt Photo Upload
+```tsx
+<ReceiptUploadModal
+  isOpen={showReceiptModal}
+  onClose={() => setShowReceiptModal(false)}
+  onSubmit={handleReceiptTransaction}
+  budgetCategories={budgetCategories}
+/>
 ```
 
 ## Benefits of Modularization

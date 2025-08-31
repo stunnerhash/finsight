@@ -6,7 +6,7 @@ import BudgetCategoryItem  from '@/components/dashboard/BudgetCategoryItem';
 import type { BudgetCategory } from '@/types/finance';
 
 interface BudgetCategoriesSectionProps {
-  budgetCategories: readonly BudgetCategory[];
+  budgetCategories: BudgetCategory[];
 }
 
 const BudgetCategoriesSection: React.FC<BudgetCategoriesSectionProps> = ({ budgetCategories }) => (

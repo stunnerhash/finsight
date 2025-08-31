@@ -12,8 +12,8 @@ export interface BackendTransaction {
   amount: number;
   type: 'income' | 'expense';
   date: string;
-  categoryId: number;
-  category: {
+  categoryId?: number;
+  category?: {
     id: number;
     name: string;
     budgeted: number;
@@ -32,50 +32,70 @@ export interface BackendBudgetCategory {
 }
 
 export interface BackendStats {
-  income: number;
-  expenses: number;
-  savings: number;
+  current: {
+    income: number;
+    expenses: number;
+    savings: number;
+  };
+  previous: {
+    income: number;
+    expenses: number;
+    savings: number;
+  };
+  changes: {
+    income: number;
+    expenses: number;
+    savings: number;
+  };
 }
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-      ...options,
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+        ...options,
+      });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
+
+      const data: ApiResponse<T> = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'API request failed');
+      }
+
+      return data.data as T;
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
-
-    const data: ApiResponse<T> = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'API request failed');
-    }
-
-    return data.data as T;
   }
 
-  async getBudgetCategories(): Promise<BackendBudgetCategory[]> {
-    return this.request<BackendBudgetCategory[]>('/budget/categories');
+  async getBudgetCategories(period?: string): Promise<BackendBudgetCategory[]> {
+    const params = period ? `?period=${period}` : '';
+    return this.request<BackendBudgetCategory[]>(`/budget/categories${params}`);
   }
 
-  async getStats(): Promise<BackendStats> {
-    return this.request<BackendStats>('/budget/stats');
+  async getStats(period?: string): Promise<BackendStats> {
+    const params = period ? `?period=${period}` : '';
+    return this.request<BackendStats>(`/budget/stats${params}`);
   }
 
-  async getTransactions(): Promise<BackendTransaction[]> {
-    return this.request<BackendTransaction[]>('/transactions');
+  async getTransactions(period?: string): Promise<BackendTransaction[]> {
+    const params = period ? `?period=${period}` : '';
+    return this.request<BackendTransaction[]>(`/transactions${params}`);
   }
 
   async addTransaction(transaction: {
     title: string;
     amount: number;
-    categoryId: number;
+    categoryId?: number;
     type: 'income' | 'expense';
   }): Promise<BackendTransaction> {
     return this.request<BackendTransaction>('/transactions', {

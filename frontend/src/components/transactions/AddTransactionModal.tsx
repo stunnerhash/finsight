@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter} from '@/components/ui/dialog';
 
 interface BackendBudgetCategory {
   id: number;
@@ -21,7 +22,7 @@ interface AddTransactionModalProps {
     type: 'income' | 'expense';
   };
   onFormDataChange: (field: 'title' | 'amount' | 'categoryId' | 'type', value: string | 'income' | 'expense') => void;
-  budgetCategories: BackendBudgetCategory[];
+  budgetCategories: readonly BackendBudgetCategory[];
 }
 
 const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
@@ -32,12 +33,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onFormDataChange,
   budgetCategories
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="text-left fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background p-6 rounded-lg w-full max-w-md mx-4">
-        <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-full max-w-md mx-4">
+        <DialogHeader>
+          <DialogTitle>Add New Transaction</DialogTitle>
+        </DialogHeader>
         
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
@@ -62,20 +63,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-2">Category</label>
-            <select
-              value={formData.categoryId}
-              onChange={(e) => onFormDataChange('categoryId', e.target.value)}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background"
-              required
-            >
-              <option value="">Select a category</option>
-              {budgetCategories.map(category => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-          </div>
           
           <div>
             <label className="block text-sm font-medium mb-2">Type</label>
@@ -88,8 +75,25 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <option value="income">Income</option>
             </select>
           </div>
+
+          {formData.type === 'expense' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Category</label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => onFormDataChange('categoryId', e.target.value)}
+                className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                required
+              >
+                <option value="">Select a category</option>
+                {budgetCategories.map(category => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           
-          <div className="flex gap-3 pt-4">
+          <DialogFooter className="flex gap-3 pt-4 p-0">
             <Button type="submit" className="flex-1">
               Add Transaction
             </Button>
@@ -101,10 +105,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             >
               Cancel
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

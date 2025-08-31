@@ -1,13 +1,14 @@
 import React from 'react';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
 interface TransactionHeaderProps {
   onAddTransaction: () => void;
+  onUploadReceipt: () => void;
 }
 
-const TransactionHeader: React.FC<TransactionHeaderProps> = ({ onAddTransaction }) => {
+const TransactionHeader: React.FC<TransactionHeaderProps> = ({ onAddTransaction, onUploadReceipt }) => {
   return (
     <>
       {/* Navigation Breadcrumb */}
@@ -28,10 +29,16 @@ const TransactionHeader: React.FC<TransactionHeaderProps> = ({ onAddTransaction 
             Manage your income and expenses
           </p>
         </div>
-        <Button onClick={onAddTransaction} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Transaction
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={onUploadReceipt} className="flex items-center gap-2">
+            <Camera className="h-4 w-4" />
+            Upload Receipt
+          </Button>
+          <Button onClick={onAddTransaction} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Transaction
+          </Button>
+        </div>
       </div>
     </>
   );

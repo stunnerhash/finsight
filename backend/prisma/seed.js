@@ -24,8 +24,8 @@ async function main() {
       update: {},
       create: {
         name: 'Food',
-        budgeted: 800,
-        spent: 456.78,
+        budgeted: 8000,
+        spent: 0,
         color: 'bg-blue-500',
         userId: user.id,
       },
@@ -35,8 +35,8 @@ async function main() {
       update: {},
       create: {
         name: 'Transportation',
-        budgeted: 400,
-        spent: 267.34,
+        budgeted: 4000,
+        spent: 0,
         color: 'bg-green-500',
         userId: user.id,
       },
@@ -46,8 +46,8 @@ async function main() {
       update: {},
       create: {
         name: 'Entertainment',
-        budgeted: 300,
-        spent: 145.99,
+        budgeted: 3000,
+        spent: 0,
         color: 'bg-purple-500',
         userId: user.id,
       },
@@ -57,8 +57,8 @@ async function main() {
       update: {},
       create: {
         name: 'Shopping',
-        budgeted: 500,
-        spent: 289.45,
+        budgeted: 5000,
+        spent: 0,
         color: 'bg-orange-500',
         userId: user.id,
       },
@@ -68,8 +68,8 @@ async function main() {
       update: {},
       create: {
         name: 'Utilities',
-        budgeted: 300,
-        spent: 245.67,
+        budgeted: 3000,
+        spent: 0,
         color: 'bg-red-500',
         userId: user.id,
       },
@@ -79,9 +79,20 @@ async function main() {
       update: {},
       create: {
         name: 'Healthcare',
-        budgeted: 200,
-        spent: 89.23,
+        budgeted: 2000,
+        spent: 0,
         color: 'bg-pink-500',
+        userId: user.id,
+      },
+    }),
+    prisma.budgetCategory.upsert({
+      where: { id: 7 },
+      update: {},
+      create: {
+        name: 'Other',
+        budgeted: 6000,
+        spent: 0,
+        color: 'bg-green-500',
         userId: user.id,
       },
     }),
@@ -96,7 +107,7 @@ async function main() {
       update: {},
       create: {
         title: 'Grocery Store',
-        amount: -125.50,
+        amount: 1250,
         type: 'expense',
         userId: user.id,
         categoryId: 1, // Food
@@ -107,10 +118,10 @@ async function main() {
       update: {},
       create: {
         title: 'Salary Deposit',
-        amount: 5000.00,
+        amount: 15000.00,
         type: 'income',
         userId: user.id,
-        categoryId: 1, // Food (for income, category doesn't matter much)
+        // No category for income
       },
     }),
     prisma.transaction.upsert({
@@ -118,7 +129,7 @@ async function main() {
       update: {},
       create: {
         title: 'Netflix Subscription',
-        amount: -15.99,
+        amount: 1500,
         type: 'expense',
         userId: user.id,
         categoryId: 3, // Entertainment
@@ -129,7 +140,7 @@ async function main() {
       update: {},
       create: {
         title: 'Gas Station',
-        amount: -75.20,
+        amount: 7500,
         type: 'expense',
         userId: user.id,
         categoryId: 2, // Transportation
@@ -140,7 +151,7 @@ async function main() {
       update: {},
       create: {
         title: 'Restaurant',
-        amount: -89.45,
+        amount: 4900,
         type: 'expense',
         userId: user.id,
         categoryId: 1, // Food

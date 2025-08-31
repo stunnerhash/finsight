@@ -1,36 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Loading } from '@/components/ui/loading';
 import { financeService } from '@/services/financeService';
+import type { BackendTransaction, BackendBudgetCategory } from '@/services/api';
 import {
   TransactionHeader,
   TransactionFilters,
   TransactionsTable,
-  AddTransactionModal
+  AddTransactionModal,
+  ReceiptUploadModal
 } from '@/components/transactions';
-// Types are now defined inline in each component
-interface BackendTransaction {
-  id: number;
-  title: string;
-  amount: number;
-  type: 'income' | 'expense';
-  date: string;
-  categoryId: number;
-  category: {
-    id: number;
-    name: string;
-    budgeted: number;
-    spent: number;
-    color: string;
-  };
-}
-
-interface BackendBudgetCategory {
-  id: number;
-  name: string;
-  budgeted: number;
-  spent: number;
-  color: string;
-}
 
 const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
@@ -43,8 +21,8 @@ const TransactionsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
-  // Form state for adding transaction
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
@@ -78,22 +56,51 @@ const TransactionsPage: React.FC = () => {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.amount || !formData.categoryId) {
-      alert('Please fill in all fields');
+    if (!formData.title || !formData.amount) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (formData.type === 'expense' && !formData.categoryId) {
+      alert('Please select a category for expenses');
       return;
     }
 
     try {
-      await financeService.addTransaction({
+      const transactionData: {
+        title: string;
+        amount: number;
+        type: 'income' | 'expense';
+        categoryId?: number;
+      } = {
         title: formData.title,
         amount: parseFloat(formData.amount),
-        categoryId: parseInt(formData.categoryId),
         type: formData.type
-      });
+      };
+      
+      if (formData.type === 'expense' && formData.categoryId) {
+        transactionData.categoryId = parseInt(formData.categoryId);
+      }
+     
+      await financeService.addTransaction(transactionData);
 
-      // Reset form and close modal
       setFormData({ title: '', amount: '', categoryId: '', type: 'expense' });
       setShowAddModal(false);
+      
+      fetchData();
+    } catch (err) {
+      alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleReceiptTransaction = async (transactionData: {
+    title: string;
+    amount: number;
+    categoryId: number;
+    type: 'income' | 'expense';
+  }) => {
+    try {
+      await financeService.addTransaction(transactionData);
       
       // Refresh data
       fetchData();
@@ -105,7 +112,8 @@ const TransactionsPage: React.FC = () => {
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || transaction.type === selectedType;
-    const matchesCategory = selectedCategory === 'all' || transaction.categoryId === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || 
+      (transaction.categoryId && transaction.categoryId === selectedCategory);
     
     return matchesSearch && matchesType && matchesCategory;
   });
@@ -175,7 +183,10 @@ const TransactionsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
-        <TransactionHeader onAddTransaction={() => setShowAddModal(true)} />
+        <TransactionHeader 
+          onAddTransaction={() => setShowAddModal(true)} 
+          onUploadReceipt={() => setShowReceiptModal(true)}
+        />
         
         <TransactionFilters
           searchTerm={searchTerm}
@@ -193,7 +204,7 @@ const TransactionsPage: React.FC = () => {
         />
 
         <TransactionsTable
-          transactions={sortedTransactions}
+          transactions={sortedTransactions as BackendTransaction[]}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSort={toggleSort}
@@ -205,6 +216,13 @@ const TransactionsPage: React.FC = () => {
           onSubmit={handleAddTransaction}
           formData={formData}
           onFormDataChange={(field, value) => setFormData({ ...formData, [field]: value })}
+          budgetCategories={budgetCategories}
+        />
+
+        <ReceiptUploadModal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          onSubmit={handleReceiptTransaction}
           budgetCategories={budgetCategories}
         />
       </div>

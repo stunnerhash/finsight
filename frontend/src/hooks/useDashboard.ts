@@ -2,11 +2,19 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { financeService } from '@/services/financeService';
 import { formatCurrency } from '@/utils/financeUtils';
 import type { TimePeriod, StatCardProps, FinanceData } from '@/types/finance';
-import { TrendingUp, TrendingDown, Target, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, IndianRupee } from 'lucide-react';
 
+/**
+ * Dashboard hook for managing finance data and statistics
+ * 
+ * ✅ Month-over-month percentage calculations now use real data from the API:
+ * - Fetches current month and previous month data from backend
+ * - Calculates actual percentage changes based on real transaction data
+ * - No more simulated baselines - all percentages are accurate!
+ */
 export const useDashboard = () => {
   const [balanceVisible, setBalanceVisible] = useState<boolean>(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('This Month');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('Current Month');
   const [financeData, setFinanceData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,25 +61,83 @@ export const useDashboard = () => {
     console.log('Add transaction clicked - navigation handled by component');
   }, []);
   
-  const handlePeriodChange = useCallback((period: TimePeriod) => {
+  const handlePeriodChange = useCallback(async (period: TimePeriod) => {
     setSelectedPeriod(period);
+    
+    // Map frontend period to backend period
+    let backendPeriod: string;
+    switch (period) {
+      case 'Current Month':
+        backendPeriod = 'current';
+        break;
+      case 'Previous Month':
+        backendPeriod = 'previous';
+        break;
+      case 'This Year':
+        backendPeriod = 'yearly';
+        break;
+      default:
+        backendPeriod = 'current';
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await financeService.getFinanceData(backendPeriod);
+      setFinanceData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      console.error('Error fetching finance data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const refreshData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await financeService.refreshData();
+      
+      // Map current period to backend period
+      let backendPeriod: string;
+      switch (selectedPeriod) {
+        case 'Current Month':
+          backendPeriod = 'current';
+          break;
+        case 'Previous Month':
+          backendPeriod = 'previous';
+          break;
+        case 'This Year':
+          backendPeriod = 'yearly';
+          break;
+        default:
+          backendPeriod = 'current';
+      }
+      
+      const data = await financeService.getFinanceData(backendPeriod);
       setFinanceData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh data');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedPeriod]);
 
   const statsConfig = useMemo((): StatCardProps[] => {
     if (!financeData) return [];
+    
+    // Use real month-over-month data from the API
+    const monthlyIncomeChange = {
+      value: Math.abs(financeData.monthlyIncomeChange).toFixed(1),
+      isPositive: financeData.monthlyIncomeChange >= 0,
+      description: "from last month"
+    };
+    
+    const monthlyExpensesChange = {
+      value: Math.abs(financeData.monthlyExpensesChange).toFixed(1),
+      isPositive: financeData.monthlyExpensesChange >= 0,
+      description: "from last month"
+    };
     
     return [
       {
@@ -94,9 +160,9 @@ export const useDashboard = () => {
         iconBgColor: "bg-red-100",
         iconColor: "text-red-600",
         trend: {
-          value: "12.5%",
-          isPositive: false,
-          description: "from last month"
+          value: `${monthlyExpensesChange.value}%`,
+          isPositive: monthlyExpensesChange.isPositive,
+          description: monthlyExpensesChange.description
         }
       },
       {
@@ -106,15 +172,15 @@ export const useDashboard = () => {
         iconBgColor: "bg-green-100",
         iconColor: "text-green-600",
         trend: {
-          value: "2.1%",
-          isPositive: true,
-          description: "from last month"
+          value: `${monthlyIncomeChange.value}%`,
+          isPositive: monthlyIncomeChange.isPositive,
+          description: monthlyIncomeChange.description
         }
       },
       {
         title: "Savings Goal",
         value: financeData.currentSavings,
-        icon: DollarSign,
+        icon: IndianRupee,
         iconBgColor: "bg-purple-100",
         iconColor: "text-purple-600",
         progress: {

@@ -9,8 +9,43 @@ const getTransactions = async (req, res) => {
       return res.status(404).json(ApiResponse.error("No user found"));
     }
 
+    const { period = 'current' } = req.query;
+    
+    const now = new Date();
+    let targetMonth, targetYear;
+
+    // Determine the target period based on the query parameter
+    switch (period) {
+      case 'previous':
+        // Previous month
+        targetMonth = now.getMonth() - 1;
+        targetYear = now.getFullYear();
+        break;
+      case 'yearly':
+        // This year
+        targetMonth = 0; // January
+        targetYear = now.getFullYear();
+        break;
+      default:
+        // Current month (default)
+        targetMonth = now.getMonth();
+        targetYear = now.getFullYear();
+    }
+
+    // Calculate period start and end dates
+    const periodStart = new Date(targetYear, targetMonth, 1);
+    const periodEnd = period === 'yearly' 
+      ? new Date(targetYear, 11, 31, 23, 59, 59) // End of year
+      : new Date(targetYear, targetMonth + 1, 0, 23, 59, 59); // End of month
+
     const transactions = await prisma.transaction.findMany({
-      where: { userId: user.id },
+      where: { 
+        userId: user.id,
+        date: {
+          gte: periodStart,
+          lte: periodEnd
+        }
+      },
       orderBy: { date: "desc" },
       take: 10,
       include: { category: true }
@@ -25,8 +60,13 @@ const addTransaction = async (req, res) => {
   try {
     const { title, amount, categoryId, type } = req.body;
 
-    if (!title || !amount || !categoryId || !type) {
+    if (!title || !amount || !type) {
       return res.status(400).json(ApiResponse.error("Missing required fields"));
+    }
+
+    // Only require categoryId for expenses
+    if (type === 'expense' && !categoryId) {
+      return res.status(400).json(ApiResponse.error("Category is required for expenses"));
     }
 
     // For now, use the first user (you can add authentication later)
@@ -39,14 +79,14 @@ const addTransaction = async (req, res) => {
       data: { 
         title, 
         amount, 
-        categoryId, 
+        categoryId: type === 'expense' ? categoryId : null, 
         type,
         userId: user.id
       }
     });
 
-    // Update budget category spent amount
-    if (type === 'expense') {
+    // Update budget category spent amount only for expenses
+    if (type === 'expense' && categoryId) {
       await prisma.budgetCategory.update({
         where: { id: categoryId },
         data: { spent: { increment: Math.abs(amount) } }

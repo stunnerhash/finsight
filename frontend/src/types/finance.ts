@@ -8,6 +8,7 @@ export interface Transaction {
 }
 
 export interface BudgetCategory {
+  readonly id: number;
   readonly name: string;
   readonly budgeted: number;
   readonly spent: number;
@@ -22,6 +23,11 @@ export interface FinanceData {
   readonly currentSavings: number;
   readonly recentTransactions: readonly Transaction[];
   readonly budgetCategories: readonly BudgetCategory[];
+  // Month-over-month comparison data
+  readonly previousMonthIncome: number;
+  readonly previousMonthExpenses: number;
+  readonly monthlyIncomeChange: number;
+  readonly monthlyExpensesChange: number;
 }
 
 export type TransactionType = 'income' | 'expense';
@@ -37,7 +43,7 @@ export type TransactionCategory =
   | 'Investment'
   | 'Other';
 
-export type TimePeriod = 'This Week' | 'This Month' | 'Last Month' | 'This Year';
+export type TimePeriod = 'Current Month' | 'Previous Month' | 'This Year';
 
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 

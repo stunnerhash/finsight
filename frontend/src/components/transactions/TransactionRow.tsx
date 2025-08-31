@@ -1,22 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/financeUtils';
-
-interface BackendTransaction {
-  id: number;
-  title: string;
-  amount: number;
-  type: 'income' | 'expense';
-  date: string;
-  categoryId: number;
-  category: {
-    id: number;
-    name: string;
-    budgeted: number;
-    spent: number;
-    color: string;
-  };
-}
+import type { BackendTransaction } from '@/services/api';
 
 interface TransactionRowProps {
   transaction: BackendTransaction;
@@ -33,7 +18,9 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction }) => {
         </span>
       </td>
       <td className="py-3 px-4">
-        <Badge variant="outline">{transaction.category.name}</Badge>
+        <Badge variant="outline">
+          {transaction.category?.name || (transaction.type === 'income' ? 'Income' : 'Other')}
+        </Badge>
       </td>
       <td className="py-3 px-4">
         <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>

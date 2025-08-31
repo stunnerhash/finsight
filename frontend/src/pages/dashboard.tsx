@@ -1,16 +1,17 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { 
   DashboardHeader,
   StatsSection,
   BudgetCategoriesSection,
   RecentTransactionsSection
 } from '@/components/dashboard';
+import { AddTransactionModal, ReceiptUploadModal } from '@/components/transactions';
 import { Loading } from '@/components/ui/loading';
 import { useDashboard } from '@/hooks/useDashboard';
+import { financeService } from '@/services/financeService';
+import type { BackendBudgetCategory } from '@/services/api';
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
   const {
     selectedPeriod,
     statsConfig,
@@ -21,8 +22,71 @@ const Dashboard: React.FC = () => {
     refreshData
   } = useDashboard();
 
+  // Modal state for adding transaction
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    amount: '',
+    categoryId: '',
+    type: 'expense' as 'income' | 'expense'
+  });
+
   const handleAddTransactionClick = () => {
-    navigate('/transactions');
+    setShowAddModal(true);
+  };
+
+  const handleUploadReceiptClick = () => {
+    setShowReceiptModal(true);
+  };
+
+  const handleAddTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title || !formData.amount) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    // Only require category for expenses
+    if (formData.type === 'expense' && !formData.categoryId) {
+      alert('Please select a category for expenses');
+      return;
+    }
+
+    try {
+      await financeService.addTransaction({
+        title: formData.title,
+        amount: parseFloat(formData.amount),
+        categoryId: parseInt(formData.categoryId),
+        type: formData.type
+      });
+
+      // Reset form and close modal
+      setFormData({ title: '', amount: '', categoryId: '', type: 'expense' });
+      setShowAddModal(false);
+      
+      // Refresh dashboard data
+      refreshData();
+    } catch (err) {
+      alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleReceiptTransaction = async (transactionData: {
+    title: string;
+    amount: number;
+    categoryId: number;
+    type: 'income' | 'expense';
+  }) => {
+    try {
+      await financeService.addTransaction(transactionData);
+      
+      // Refresh dashboard data
+      refreshData();
+    } catch (err) {
+      alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
   };
 
   if (loading) {
@@ -67,6 +131,7 @@ const Dashboard: React.FC = () => {
         <DashboardHeader 
           selectedPeriod={selectedPeriod}
           onAddTransaction={handleAddTransactionClick}
+          onUploadReceipt={handleUploadReceiptClick}
           onPeriodChange={handlePeriodChange}
         />
         
@@ -74,13 +139,29 @@ const Dashboard: React.FC = () => {
         
         <div className="grid gap-8 md:grid-cols-3">
           <div className="md:col-span-2">
-            <BudgetCategoriesSection budgetCategories={financeData.budgetCategories} />
+            <BudgetCategoriesSection budgetCategories={financeData.budgetCategories as BackendBudgetCategory[]} />
           </div>
           
           <div>
             <RecentTransactionsSection recentTransactions={financeData.recentTransactions} />
           </div>
         </div>
+
+        <AddTransactionModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddTransaction}
+          formData={formData}
+          onFormDataChange={(field, value) => setFormData({ ...formData, [field]: value })}
+          budgetCategories={financeData.budgetCategories}
+        />
+
+        <ReceiptUploadModal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          onSubmit={handleReceiptTransaction}
+          budgetCategories={financeData.budgetCategories}
+        />
       </div>
     </div>
   );

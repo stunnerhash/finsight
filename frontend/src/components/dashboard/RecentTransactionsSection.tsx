@@ -15,21 +15,21 @@ const RecentTransactionsSection: React.FC<RecentTransactionsSectionProps> = ({
 }) => (
   <Card>
     <CardHeader>
-      <div className="flex items-center justify-between text-left">
-        <CardTitle>Recent Transactions</CardTitle>
-        <Link to="/transactions">
-          <Button variant="outline" className="gap-2 text-white">
-            <List className="h-4 w-4" />
-            View All
-          </Button>
-        </Link>
-      </div>
+      <CardTitle>Recent Transactions</CardTitle>
     </CardHeader>
     <CardContent>
       <div className="text-left space-y-4">
         {recentTransactions.map((transaction) => (
           <TransactionItem key={transaction.id} transaction={transaction} />
         ))}
+      </div>
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <Link to="/transactions">
+          <Button variant="outline" size="sm" className="w-full gap-2 text-white hover:text-white">
+            <List className="h-4 w-4" />
+            View All Transactions
+          </Button>
+        </Link>
       </div>
     </CardContent>
   </Card>
