@@ -10,6 +10,7 @@ import {
   AddTransactionModal,
   ReceiptUploadModal
 } from '@/components/transactions';
+
 import {
   Pagination,
   PaginationContent,
@@ -284,8 +285,6 @@ const TransactionsPage: React.FC = () => {
           onSort={toggleSort}
         />
 
-
-
         {/* Always show pagination for testing */}
         <div className="mt-6">
           {paginationInfo ? (
@@ -295,6 +294,7 @@ const TransactionsPage: React.FC = () => {
                   <PaginationPrevious 
                     onClick={() => handlePageChange(paginationInfo.currentPage - 1)}
                     className={paginationInfo.currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    size="default"
                   />
                 </PaginationItem>
                 
@@ -304,6 +304,7 @@ const TransactionsPage: React.FC = () => {
                       onClick={() => handlePageChange(page)}
                       isActive={page === paginationInfo.currentPage}
                       className="cursor-pointer"
+                      size="default"
                     >
                       {page}
                     </PaginationLink>
@@ -314,6 +315,7 @@ const TransactionsPage: React.FC = () => {
                   <PaginationNext 
                     onClick={() => handlePageChange(paginationInfo.currentPage + 1)}
                     className={paginationInfo.currentPage === paginationInfo.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    size="default"
                   />
                 </PaginationItem>
               </PaginationContent>

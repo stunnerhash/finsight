@@ -137,6 +137,17 @@ class ApiService {
       body: JSON.stringify(transaction),
     });
   }
+
+  async updateBudgetCategory(categoryId: number, updates: {
+    budgeted?: number;
+    name?: string;
+    color?: string;
+  }): Promise<BackendBudgetCategory> {
+    return this.request<BackendBudgetCategory>(`/budget/categories/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
 }
 
 export const apiService = new ApiService();

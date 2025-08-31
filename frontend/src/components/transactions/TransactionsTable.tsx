@@ -22,8 +22,8 @@ interface BackendTransaction {
   amount: number;
   type: 'income' | 'expense';
   date: string;
-  categoryId: number;
-  category: {
+  categoryId?: number | null;
+  category?: {
     id: number;
     name: string;
     budgeted: number;

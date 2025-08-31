@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   DashboardHeader,
   StatsSection,
@@ -6,10 +6,13 @@ import {
   RecentTransactionsSection
 } from '@/components/dashboard';
 import { AddTransactionModal, ReceiptUploadModal } from '@/components/transactions';
+import { 
+  ExpensesByCategoryChart
+} from '@/components/charts';
 import { Loading } from '@/components/ui/loading';
 import { useDashboard } from '@/hooks/useDashboard';
 import { financeService } from '@/services/financeService';
-import type { BackendBudgetCategory } from '@/services/api';
+import type { BackendBudgetCategory, BackendTransaction } from '@/services/api';
 
 const Dashboard: React.FC = () => {
   const {
@@ -32,6 +35,10 @@ const Dashboard: React.FC = () => {
     type: 'expense' as 'income' | 'expense'
   });
 
+  // Chart data state
+  const [transactions, setTransactions] = useState<BackendTransaction[]>([]);
+  const [budgetCategories, setBudgetCategories] = useState<BackendBudgetCategory[]>([]);
+
   const handleAddTransactionClick = () => {
     setShowAddModal(true);
   };
@@ -39,6 +46,26 @@ const Dashboard: React.FC = () => {
   const handleUploadReceiptClick = () => {
     setShowReceiptModal(true);
   };
+
+  // Fetch chart data
+  const fetchChartData = async () => {
+    try {
+      const [transactionsResponse, categoriesData] = await Promise.all([
+        financeService.apiService.getTransactions({ limit: 1000 }), // Get more transactions for charts
+        financeService.apiService.getBudgetCategories()
+      ]);
+      
+      setTransactions(transactionsResponse.transactions);
+      setBudgetCategories(categoriesData);
+    } catch (err) {
+      console.error('Failed to fetch chart data:', err);
+    }
+  };
+
+  // Fetch chart data on component mount
+  useEffect(() => {
+    fetchChartData();
+  }, []);
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +95,8 @@ const Dashboard: React.FC = () => {
       
       // Refresh dashboard data
       refreshData();
+      // Refresh chart data
+      fetchChartData();
     } catch (err) {
       alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
@@ -84,8 +113,23 @@ const Dashboard: React.FC = () => {
       
       // Refresh dashboard data
       refreshData();
+      // Refresh chart data
+      fetchChartData();
     } catch (err) {
       alert('Failed to add transaction: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleBudgetUpdate = async (categoryId: number, budgeted: number) => {
+    try {
+      await financeService.apiService.updateBudgetCategory(categoryId, { budgeted });
+      
+      // Refresh dashboard data
+      refreshData();
+      // Refresh chart data
+      fetchChartData();
+    } catch (err) {
+      alert('Failed to update budget: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -139,11 +183,25 @@ const Dashboard: React.FC = () => {
         
         <div className="grid gap-8 md:grid-cols-3">
           <div className="md:col-span-2">
-            <BudgetCategoriesSection budgetCategories={financeData.budgetCategories as BackendBudgetCategory[]} />
+            <BudgetCategoriesSection 
+              budgetCategories={financeData.budgetCategories as BackendBudgetCategory[]} 
+              onBudgetUpdate={handleBudgetUpdate}
+            />
           </div>
           
           <div>
             <RecentTransactionsSection recentTransactions={financeData.recentTransactions} />
+          </div>
+        </div>
+
+        {/* Analytics Charts Section */}
+        <div className="mt-8 space-y-6">
+          <h2 className="text-2xl font-bold text-left">Analytics</h2>
+          <div className="w-full">
+            <ExpensesByCategoryChart
+              transactions={transactions}
+              budgetCategories={budgetCategories}
+            />
           </div>
         </div>
 

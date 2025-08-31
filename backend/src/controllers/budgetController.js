@@ -68,6 +68,38 @@ const getBudgetCategories = async (req, res) => {
   }
 };
 
+const updateBudgetCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { budgeted, name, color } = req.body;
+
+    // For now, get the first user (you can add authentication later)
+    const user = await prisma.user.findFirst();
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("No user found"));
+    }
+
+    // Update the budget category
+    const updatedCategory = await prisma.budgetCategory.update({
+      where: { 
+        id: parseInt(id),
+        userId: user.id // Ensure the category belongs to the user
+      },
+      data: {
+        ...(budgeted !== undefined && { budgeted: parseFloat(budgeted) }),
+        ...(name !== undefined && { name }),
+        ...(color !== undefined && { color })
+      },
+      include: { transactions: true }
+    });
+
+    res.json(ApiResponse.success(updatedCategory));
+  } catch (error) {
+    console.error('Error updating budget category:', error);
+    res.status(500).json(ApiResponse.error(error.message));
+  }
+};
+
 const getStats = async (req, res) => {
   try {
     // For now, get stats for the first user
@@ -166,4 +198,4 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getBudgetCategories, getStats };
+module.exports = { getBudgetCategories, getStats, updateBudgetCategory };

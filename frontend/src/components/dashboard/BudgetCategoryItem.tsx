@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Edit2 } from 'lucide-react';
 import type { BudgetCategoryItemProps } from '@/types/finance';
 import { formatCurrency, getBadgeVariant } from '@/utils/financeUtils';
 
-const BudgetCategoryItem: React.FC<BudgetCategoryItemProps> = ({ category }) => {
+const BudgetCategoryItem: React.FC<BudgetCategoryItemProps> = ({ category, onEdit }) => {
   const percentageUsed = useMemo(() => (category.spent / category.budgeted) * 100, [category.spent, category.budgeted]);
   const remaining = useMemo(() => category.budgeted - category.spent, [category.budgeted, category.spent]);
   
@@ -34,6 +35,14 @@ const BudgetCategoryItem: React.FC<BudgetCategoryItemProps> = ({ category }) => 
           </div>
         </div>
       </div>
+      {onEdit && (
+        <div
+          onClick={() => onEdit(category)}
+          className="ml-2 cursor-pointer text-blue-500 hover:text-blue-600 transition-colors"
+        >
+          <Edit2 className="h-4 w-4" />
+        </div>
+      )}
     </div>
   );
 };

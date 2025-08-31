@@ -69,6 +69,7 @@ export interface StatCardProps {
 export interface BudgetCategoryItemProps {
   category: BudgetCategory;
   index: number;
+  onEdit?: (category: BudgetCategory) => void;
 }
 
 export interface TransactionItemProps {
